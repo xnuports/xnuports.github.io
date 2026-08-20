@@ -162,9 +162,15 @@ fi
 
 PACKAGE_DIR="$(cd "${PACKAGE_DIR}" && pwd)"
 
-# Infer name and version from directory name (e.g., wizardry-1.2.2)
+# Infer name and version from directory name (e.g., wizardry-1.2.2, pkg-v2.8.99.1)
 dir_name="$(basename "${PACKAGE_DIR}")"
 if [[ "${dir_name}" =~ ^(.+)-([0-9]+\.[0-9]+[^/]*)$ ]]; then
+  INFERRED_NAME="${BASH_REMATCH[1]}"
+  INFERRED_VERSION="${BASH_REMATCH[2]}"
+elif [[ "${dir_name}" =~ ^pkg-(v[0-9]+\.[0-9]+[^/-]*)(-.*)?$ ]]; then
+  INFERRED_NAME="pkg"
+  INFERRED_VERSION="${BASH_REMATCH[1]#v}"
+elif [[ "${dir_name}" =~ ^([a-zA-Z0-9_-]+)-([0-9]+\.[0-9]+[^/-]*)(-.*)?$ ]]; then
   INFERRED_NAME="${BASH_REMATCH[1]}"
   INFERRED_VERSION="${BASH_REMATCH[2]}"
 else
@@ -303,11 +309,6 @@ ${LICENSE_BLOCK}
 # Files to install
 files: {
 $(printf '%s\n' "${FILES_YAML}")
-}
-
-# Scripts (optional)
-scripts: {
-  post-install: ""
 }
 EOF
 )

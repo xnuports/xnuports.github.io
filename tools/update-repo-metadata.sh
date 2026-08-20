@@ -69,31 +69,28 @@ fi
 FAILED=0
 for repo in "${REPO_PATHS[@]}"; do
   if [[ ! -d "${repo}" ]]; then
-    echo "Skipping ${repo}: directory not found" >&2
-    FAILED=1
+    echo "Skipping ${repo}: directory not found"
     continue
   fi
 
   PACKAGES_DIR="${repo}/packages"
   if [[ ! -d "${PACKAGES_DIR}" ]]; then
-    echo "Skipping ${repo}: no packages/ directory" >&2
-    FAILED=1
+    echo "Skipping ${repo}: no packages/ directory"
     continue
   fi
 
   PKG_COUNT=$(find "${PACKAGES_DIR}" -maxdepth 1 -name "*.pkg" -type f 2>/dev/null | wc -l)
   if [[ "${PKG_COUNT}" -eq 0 ]]; then
-    echo "Skipping ${repo}: no .pkg files found in ${PACKAGES_DIR}" >&2
-    FAILED=1
+    echo "Skipping ${repo}: no .pkg files found in ${PACKAGES_DIR}"
     continue
   fi
 
   echo "==> Updating ${repo} (${PKG_COUNT} package(s))"
-  "${PKG_BIN}" repo "${repo}" 2>&1 || {
+  if ! "${PKG_BIN}" repo "${repo}" 2>&1; then
     echo "Error: pkg repo failed for ${repo}" >&2
     FAILED=1
     continue
-  }
+  fi
 
   echo "==> Generated:"
   for f in meta packagesite.pkg data.pkg; do
@@ -105,7 +102,7 @@ for repo in "${REPO_PATHS[@]}"; do
 done
 
 if [[ "${FAILED}" -ne 0 ]]; then
-  echo "Warning: one or more repositories were skipped or failed." >&2
+  echo "Error: one or more repository updates failed." >&2
   exit 1
 fi
 

@@ -60,6 +60,7 @@ Options:
   --abi=ABI              ABI string (default: macOS:arm64)
   --arch=ARCH            Architecture (default: macOS)
   --license=LICENSE      SPDX license identifier
+  --version=VERSION      Package version (overrides inferred version)
   --www=URL              Project URL
   --comment=COMMENT      Short description
   --desc=DESC            Long description
@@ -93,6 +94,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --license=*)
       LICENSE="${1#*=}"
+      shift
+      ;;
+    --version=*)
+      VERSION="${1#*=}"
       shift
       ;;
     --www=*)
@@ -170,6 +175,9 @@ if [[ -n "${ARCH}" ]]; then
 fi
 if [[ -n "${LICENSE}" ]]; then
   MANIFEST_ARGS+=(--license="${LICENSE}")
+fi
+if [[ -n "${VERSION}" ]]; then
+  MANIFEST_ARGS+=(--version="${VERSION}")
 fi
 if [[ -n "${WWW}" ]]; then
   MANIFEST_ARGS+=(--www="${WWW}")
