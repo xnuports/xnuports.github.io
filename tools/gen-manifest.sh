@@ -310,6 +310,10 @@ ${LICENSE_BLOCK}
 files: {
 $(printf '%s\n' "${FILES_YAML}")
 }
+# Post-install script to create symlinks
+scripts: {
+  post-install: "#!/bin/sh\n/opt/xnuports/bin/xpkg-symlinks 2>/dev/null || true\n"
+}
 EOF
 )
 
