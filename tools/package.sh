@@ -282,4 +282,4 @@ echo "Package created: ${OUTPUT_FILE}"
 echo
 
 # Show package info
-"${PKG_BIN}" info "${OUTPUT_FILE}" || true
+"${PKG_BIN}" info -F "${OUTPUT_FILE}" || true
