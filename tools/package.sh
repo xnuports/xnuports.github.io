@@ -11,6 +11,7 @@
 #   --abi=ABI              ABI string (default: Darwin:<os-ver>:aarch64)
 #   --arch=ARCH            Architecture (default: darwin:<os-ver>:aarch64:64)
 #   --license=LICENSE      SPDX license identifier
+#   --version=VERSION      Package version (overrides inferred version)
 #   --www=URL              Project URL
 #   --comment=COMMENT      Short description
 #   --desc=DESC            Long description
@@ -29,6 +30,7 @@ CATEGORY=""
 ARCH=""
 ABI=""
 LICENSE=""
+VERSION=""
 WWW=""
 COMMENT=""
 DESC=""
