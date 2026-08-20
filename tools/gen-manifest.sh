@@ -284,7 +284,7 @@ fi
 # Build manifest
 LICENSE_BLOCK=""
 if [[ -n "${LICENSE}" ]]; then
-  LICENSE_BLOCK=$(printf 'license: "%s"\n' "${LICENSE}")
+  LICENSE_BLOCK=$(printf 'licenses: ["%s"]\n' "${LICENSE}")
 fi
 
 MANIFEST=$(cat <<EOF
