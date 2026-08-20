@@ -12,6 +12,7 @@
 #   --arch=ARCH            Architecture (default: darwin:<os-ver>:aarch64:64)
 #   --license=LICENSE      SPDX license identifier
 #   --version=VERSION      Package version (overrides inferred version)
+#   --maintainer=EMAIL     Maintainer email
 #   --www=URL              Project URL
 #   --comment=COMMENT      Short description
 #   --desc=DESC            Long description
@@ -31,6 +32,7 @@ ARCH=""
 ABI=""
 LICENSE=""
 VERSION=""
+MAINTAINER=""
 WWW=""
 COMMENT=""
 DESC=""
@@ -100,6 +102,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --version=*)
       VERSION="${1#*=}"
+      shift
+      ;;
+    --maintainer=*)
+      MAINTAINER="${1#*=}"
       shift
       ;;
     --www=*)
@@ -180,6 +186,9 @@ if [[ -n "${LICENSE}" ]]; then
 fi
 if [[ -n "${VERSION}" ]]; then
   MANIFEST_ARGS+=(--version="${VERSION}")
+fi
+if [[ -n "${MAINTAINER}" ]]; then
+  MANIFEST_ARGS+=(--maintainer="${MAINTAINER}")
 fi
 if [[ -n "${WWW}" ]]; then
   MANIFEST_ARGS+=(--www="${WWW}")
