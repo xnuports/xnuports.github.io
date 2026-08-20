@@ -17,6 +17,7 @@
 #   --comment=COMMENT      Short description
 #   --desc=DESC            Long description
 #   --no-manifest          Skip manifest generation (use existing +MANIFEST)
+#   --allow-build-paths    Skip the check for leaked build/staging paths
 #   --dry-run              Print manifest and commands without executing
 #   --help                 Show this help
 
@@ -38,6 +39,7 @@ COMMENT=""
 DESC=""
 NO_MANIFEST=0
 DRY_RUN=0
+ALLOW_BUILD_PATHS=0
 
 # Detect default arch/abi matching pkg_bootstrap conventions
 XNUPORTS_OS_VERSION="$(sw_vers -productVersion 2>/dev/null | cut -d. -f1 || echo 26)"
@@ -69,6 +71,7 @@ Options:
   --comment=COMMENT      Short description
   --desc=DESC            Long description
   --no-manifest          Skip manifest generation (use existing +MANIFEST)
+  --allow-build-paths    Skip the check for leaked build/staging paths
   --dry-run              Print manifest and commands without executing
   --help                 Show this help
 EOF
@@ -122,6 +125,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-manifest)
       NO_MANIFEST=1
+      shift
+      ;;
+    --allow-build-paths)
+      ALLOW_BUILD_PATHS=1
       shift
       ;;
     --dry-run)
@@ -275,6 +282,66 @@ if [[ -n "${MANIFEST_CONTENT}" ]]; then
   echo "${MANIFEST_CONTENT}" > "${STAGING_DIR}/+MANIFEST"
 else
   cp "${PACKAGE_DIR}/+MANIFEST" "${STAGING_DIR}/+MANIFEST"
+fi
+
+# ─── Build-path leak check ───────────────────────────────────────────────────
+#
+# Catches the class of bug where a package is built with
+# './configure --prefix=<staging dir>', which bakes the staging path into the
+# binary as a runtime lookup path. The package installs fine, then fails at
+# runtime once the staging tree moves or is deleted.
+#
+# This is what broke bmake-1.394: it was configured with --prefix pointing at
+# staging/bmake-1.394, so _PATH_DEFSYSPATH pointed there and bmake could not
+# find sys.mk from anywhere.
+#
+# The correct pattern is to configure with the real runtime prefix and stage
+# via DESTDIR:
+#
+#   ./configure --prefix=/opt/xnuports/opt/<name>
+#   make install DESTDIR=<staging dir>
+#
+# Only the staging and build directories are checked, deliberately. Source
+# paths left in debug info (DWARF entries, Go module paths) are cosmetic and
+# would produce constant false positives.
+#
+# NOTE: grep needs -a here. On macOS, grep without -a does not report matches
+# in binary files, which is exactly where these paths live.
+if [[ "${ALLOW_BUILD_PATHS}" -eq 0 ]]; then
+  echo "=== Checking for leaked build paths ==="
+  LEAK_FOUND=0
+  while IFS= read -r staged_file; do
+    [[ "$(basename "${staged_file}")" == "+MANIFEST" ]] && continue
+    if grep -qa -e "${PACKAGE_DIR}" -e "${STAGING_DIR}" "${staged_file}" 2>/dev/null; then
+      if [[ "${LEAK_FOUND}" -eq 0 ]]; then
+        echo "  Error: staged files reference the build/staging directory:" >&2
+      fi
+      echo "    ${staged_file#${STAGING_DIR}}" >&2
+      LEAK_FOUND=1
+    fi
+  done < <(find "${STAGING_DIR}" -type f)
+
+  if [[ "${LEAK_FOUND}" -ne 0 ]]; then
+    cat >&2 <<LEAKMSG
+
+  These files embed a path that will not exist on the target system:
+    ${PACKAGE_DIR}
+
+  This usually means the software was configured with
+  '--prefix=${PACKAGE_DIR}'. Rebuild with the real runtime prefix and
+  stage the install instead:
+
+    ./configure --prefix=${PKG_PREFIX}
+    make install DESTDIR=<staging dir>
+
+  Re-run with --allow-build-paths if the reference is harmless
+  (for example a path that only appears in debug information).
+
+LEAKMSG
+    exit 1
+  fi
+  echo "  OK: no build paths leaked into staged files"
+  echo
 fi
 
 echo
