@@ -11,8 +11,8 @@
 #   --prefix=PREFIX        Install prefix (default: /opt/xnuports/opt/<name>)
 #   --category=CAT         Package category (e.g., games, devel)
 #   --maintainer=EMAIL     Maintainer email
-#   --arch=ARCH            Architecture (default: macOS)
-#   --abi=ABI              ABI string (default: macOS:arm64)
+#   --arch=ARCH            Architecture (default: darwin:<os-ver>:aarch64:64)
+#   --abi=ABI              ABI string (default: Darwin:<os-ver>:aarch64)
 #   --license=LICENSE      SPDX license identifier
 #   --www=URL              Project URL
 #   --comment=COMMENT      Short description
@@ -29,8 +29,8 @@ VERSION=""
 PREFIX=""
 CATEGORY=""
 MAINTAINER=""
-ARCH="macOS"
-ABI="macOS:arm64"
+ARCH=""
+ABI=""
 LICENSE=""
 WWW=""
 COMMENT=""
@@ -38,6 +38,19 @@ DESC=""
 NO_FILES=0
 DRY_RUN=0
 OUTPUT_FILE="+MANIFEST"
+
+# Detect default arch/abi matching pkg_bootstrap conventions
+XNUPORTS_OS_VERSION="$(sw_vers -productVersion 2>/dev/null | cut -d. -f1 || echo 26)"
+XNUPORTS_ARCH="$(uname -m 2>/dev/null || echo arm64)"
+if [[ "${XNUPORTS_ARCH}" == "arm64" ]]; then
+  ARCH_PKG="aarch64"
+  ARCH_MANIFEST="darwin:${XNUPORTS_OS_VERSION}:aarch64:64"
+else
+  ARCH_PKG="${XNUPORTS_ARCH}"
+  ARCH_MANIFEST="darwin:${XNUPORTS_OS_VERSION}:amd64:64"
+fi
+ABI="Darwin:${XNUPORTS_OS_VERSION}:${ARCH_PKG}"
+ARCH="${ARCH_MANIFEST}"
 
 usage() {
   cat <<EOF
