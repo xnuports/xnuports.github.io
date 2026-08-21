@@ -277,7 +277,13 @@ if [[ "${NO_FILES}" -eq 0 ]]; then
   echo "Scanning files in ${PACKAGE_DIR}..."
   FILES_YAML=$(cd "${PACKAGE_DIR}" && find . -type f ! -name '+MANIFEST' ! -name '.DS_Store' ! -name '*.pkg' | sort | while read -r f; do
     f="${f#./}"
-    printf '  "/%s/%s": {}\n' "${PREFIX#/}" "${f}"
+    if [[ "${PREFIX}" == "/" ]]; then
+      # Root prefix means absolute system paths (/etc, /usr/bin, ...);
+      # joining PREFIX would emit "//etc/...".
+      printf '  "/%s": {}\n' "${f}"
+    else
+      printf '  "/%s/%s": {}\n' "${PREFIX#/}" "${f}"
+    fi
   done)
   if [[ -z "${FILES_YAML}" ]]; then
     echo "Warning: no files found in ${PACKAGE_DIR}" >&2

@@ -13,6 +13,11 @@
 # installs cleanly and then fails at runtime once the staging tree is gone.
 # That is how bmake-1.394 shipped broken.
 #
+# Exception: base-system style ports (xcode-tools) install to absolute paths
+# (/etc, /usr/bin, /Applications) and can never live under a prefix. When
+# nothing lands under PREFIX but DESTDIR has content, the whole DESTDIR tree
+# is staged and packaged with prefix=/ instead of failing.
+#
 # Options:
 #   --name=NAME            Package name (default: inferred from dir/go.mod)
 #   --version=VERSION      Package version (default: inferred from dir/git tag)
@@ -330,11 +335,33 @@ esac
 # ─── Stage ───────────────────────────────────────────────────────────────────
 
 STAGED="${DESTDIR}${PREFIX}"
-[[ -d "${STAGED}" ]] || die "build produced nothing at ${STAGED}; the install step may not honour DESTDIR"
+SYSTEM_LAYOUT=0
+if [[ ! -d "${STAGED}" ]]; then
+  # Base-system ports (xcode-tools) install to absolute paths (/etc, /usr/bin,
+  # /Applications/...) and can never live under the runtime prefix. If DESTDIR
+  # was honoured but nothing landed under PREFIX, package the whole tree with
+  # prefix=/ rather than failing.
+  if [[ -z "$(find "${DESTDIR}" -type f -print -quit)" ]]; then
+    die "build produced nothing at ${STAGED} nor anywhere under ${DESTDIR}; the install step may not honour DESTDIR"
+  fi
+  SYSTEM_LAYOUT=1
+  step "System-layout install detected"
+  echo "  Nothing installed under ${PREFIX}, but DESTDIR has content."
+  echo "  Staging the full DESTDIR tree; manifest prefix will be /."
+fi
 
 # package.sh takes the package name and version from the directory name.
 STAGE="${WORK}/${NAME}-${VERSION}"
-mv "${STAGED}" "${STAGE}"
+if [[ "${SYSTEM_LAYOUT}" -eq 1 ]]; then
+  mv "${DESTDIR}" "${STAGE}"
+else
+  mv "${STAGED}" "${STAGE}"
+  # Mixed installs silently lose everything outside PREFIX — say so loudly.
+  if [[ -n "$(find "${DESTDIR}" -mindepth 1 -print -quit)" ]]; then
+    echo "  Warning: files were also installed outside ${PREFIX} and are NOT packaged:" >&2
+    find "${DESTDIR}" -mindepth 1 -maxdepth 3 | sed 's/^/    /' >&2
+  fi
+fi
 
 # gen-manifest.sh enumerates files with 'find -type f', so any symlink in the
 # staged tree would be dropped from the package without warning. Materialise
@@ -347,8 +374,16 @@ while IFS= read -r link; do
     cp -L "${link}" "${link}.__deref" && mv -f "${link}.__deref" "${link}"
     link_count=$((link_count + 1))
   else
-    echo "  Warning: dropping dangling symlink $(basename "${link}")" >&2
-    rm -f "${link}"
+    # Dangling on disk, but the target may live inside the staged tree
+    # (system-layout ports symlink by absolute path, e.g. clang++ -> /Applications/...).
+    target="$(readlink "${link}")"
+    if [[ "${target}" == /* && -f "${STAGE}${target}" ]]; then
+      rm -f "${link}" && cp "${STAGE}${target}" "${link}"
+      link_count=$((link_count + 1))
+    else
+      echo "  Warning: dropping dangling symlink $(basename "${link}")" >&2
+      rm -f "${link}"
+    fi
   fi
 done < <(find "${STAGE}" -type l)
 [[ "${link_count}" -gt 0 ]] && echo "  Materialised ${link_count} symlink(s) as regular files"
@@ -365,6 +400,7 @@ echo "  $(find "${STAGE}" -type f | wc -l | tr -d ' ') files, $(du -sh "${STAGE}
 # ─── Package ─────────────────────────────────────────────────────────────────
 
 PKG_ARGS=("${STAGE}" "--category=${CATEGORY}" "--version=${VERSION}" "--output=${OUTPUT_DIR}")
+[[ "${SYSTEM_LAYOUT}" -eq 1 ]] && PKG_ARGS+=("--prefix=/")
 [[ -n "${LICENSE}" ]] && PKG_ARGS+=("--license=${LICENSE}")
 [[ -n "${WWW}" ]] && PKG_ARGS+=("--www=${WWW}")
 [[ -n "${COMMENT}" ]] && PKG_ARGS+=("--comment=${COMMENT}")

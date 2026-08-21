@@ -29,6 +29,7 @@ GEN_MANIFEST="${SCRIPT_DIR}/gen-manifest.sh"
 PACKAGE_DIR=""
 OUTPUT_DIR=""
 CATEGORY=""
+PREFIX=""
 ARCH=""
 ABI=""
 LICENSE=""
@@ -63,6 +64,7 @@ Usage: $(basename "$0") <package-dir> [options]
 Options:
   --output=DIR           Output directory (default: <package-dir>/..)
   --category=CAT         Package category (e.g., games, devel)
+  --prefix=PREFIX        Install prefix (default: /opt/xnuports/opt/<name>; use / for system-layout packages)
   --abi=ABI              ABI string (default: macOS:arm64)
   --arch=ARCH            Architecture (default: macOS)
   --license=LICENSE      SPDX license identifier
@@ -89,6 +91,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --category=*)
       CATEGORY="${1#*=}"
+      shift
+      ;;
+    --prefix=*)
+      PREFIX="${1#*=}"
       shift
       ;;
     --abi=*)
@@ -181,6 +187,9 @@ fi
 MANIFEST_ARGS=(--dry-run)
 if [[ -n "${CATEGORY}" ]]; then
   MANIFEST_ARGS+=(--category="${CATEGORY}")
+fi
+if [[ -n "${PREFIX}" ]]; then
+  MANIFEST_ARGS+=(--prefix="${PREFIX}")
 fi
 if [[ -n "${ABI}" ]]; then
   MANIFEST_ARGS+=(--abi="${ABI}")
