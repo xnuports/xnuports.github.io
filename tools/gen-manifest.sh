@@ -275,7 +275,7 @@ echo
 FILES_YAML=""
 if [[ "${NO_FILES}" -eq 0 ]]; then
   echo "Scanning files in ${PACKAGE_DIR}..."
-  FILES_YAML=$(cd "${PACKAGE_DIR}" && find . -type f ! -name '+MANIFEST' ! -name '.DS_Store' ! -name '*.pkg' | sort | while read -r f; do
+  FILES_YAML=$(cd "${PACKAGE_DIR}" && find . -type f ! -name '+MANIFEST' ! -name '+POST-INSTALL' ! -name '.DS_Store' ! -name '*.pkg' | sort | while read -r f; do
     f="${f#./}"
     if [[ "${PREFIX}" == "/" ]]; then
       # Root prefix means absolute system paths (/etc, /usr/bin, ...);
@@ -299,6 +299,15 @@ if [[ -n "${LICENSE}" ]]; then
   LICENSE_BLOCK=$(printf 'licenses: ["%s"]\n' "${LICENSE}")
 fi
 
+# Per-package post-install hook: +POST-INSTALL in the package dir is appended
+# after the symlink-farm refresh. Newlines are escaped for the UCL string
+# (awk, not sed: BSD sed cannot match \n in the pattern space); keep the hook
+# free of double quotes.
+POST_INSTALL_EXTRA=""
+if [[ -f "${PACKAGE_DIR}/+POST-INSTALL" ]]; then
+  POST_INSTALL_EXTRA="$(awk '{printf "%s\\n", $0}' "${PACKAGE_DIR}/+POST-INSTALL")"
+fi
+
 MANIFEST=$(cat <<EOF
 name: "${NAME}"
 version: "${VERSION}"
@@ -318,7 +327,7 @@ $(printf '%s\n' "${FILES_YAML}")
 }
 # Post-install script to create symlinks
 scripts: {
-  post-install: "#!/bin/sh\n/opt/xnuports/bin/xpkg-symlinks 2>/dev/null || true\n"
+  post-install: "#!/bin/sh\n/opt/xnuports/bin/xpkg-symlinks 2>/dev/null || true\n${POST_INSTALL_EXTRA}"
 }
 EOF
 )

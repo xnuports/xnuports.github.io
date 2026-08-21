@@ -389,7 +389,7 @@ done < <(find "${STAGE}" -type l)
 [[ "${link_count}" -gt 0 ]] && echo "  Materialised ${link_count} symlink(s) as regular files"
 
 # Match the layout of the existing packages: license and readme at the root.
-for f in LICENSE LICENCE COPYING README README.md VERSION; do
+for f in LICENSE LICENCE COPYING README README.md VERSION +POST-INSTALL; do
   [[ -f "${SRC_DIR}/${f}" && ! -e "${STAGE}/${f}" ]] && cp "${SRC_DIR}/${f}" "${STAGE}/"
 done
 
