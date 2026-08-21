@@ -327,7 +327,7 @@ $(printf '%s\n' "${FILES_YAML}")
 }
 # Post-install script to refresh the symlink farm
 scripts: {
-  post-install: "#!/bin/sh\n/opt/xnuports/opt/pkg-symlink/sbin/pkg-symlink 2>/dev/null || true\n${POST_INSTALL_EXTRA}"
+  post-install: "#!/bin/sh\n/opt/xnuports/opt/pkg-symlink/bin/pkg-symlink 2>/dev/null || true\n${POST_INSTALL_EXTRA}"
 }
 EOF
 )
