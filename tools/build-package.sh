@@ -303,7 +303,7 @@ build_bmake() {
   local src; src="$(copy_source)"
   # The default sys.mk search path must point at the installed location, not at
   # wherever this build happens. Two entries so it resolves through the
-  # xpkg-symlinks farm and still works if that farm is incomplete.
+  # pkg-symlink farm and still works if that farm is incomplete.
   (cd "${src}" && SKIP_RC=1 ./boot-strap \
     --prefix="${PREFIX}" \
     --install-destdir="${DESTDIR}" \
